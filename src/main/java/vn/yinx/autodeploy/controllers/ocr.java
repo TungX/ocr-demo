@@ -41,7 +41,7 @@ public class ocr {
 					fo);
 			System.out.println("Time request: " + (System.currentTimeMillis() - start));
 			System.out.println(rs);
-			if(rs.get("message").toString().toLowerCase().equals("api rate limit exceeded.")) {
+			if(rs.get("message") != null && rs.get("message").toString().toLowerCase().equals("api rate limit exceeded.")) {
 				//Change key
 			}
 			res.put("data", rs.get("data"));// put data by key "data"
