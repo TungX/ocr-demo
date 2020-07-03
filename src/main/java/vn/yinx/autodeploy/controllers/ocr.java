@@ -20,6 +20,20 @@ import vn.yinx.autodeploy.util.HttpUtils;
 @RequestMapping("/api/v1/ocr")
 public class ocr {
 	private Random rd = new Random();
+	private String[] keys = { "bkEBmhRUSQsPwuIeUT1qGulbWgFUPxW0", "4yJgyukl38rTmHGJxuFcqkdUZF0r8Het",
+			"Lj8bwcwFX0gEutbwB0S3K8FB3aWd3Vuq" };
+	private int currentIndex = 0;
+
+	public synchronized void addIndex() {
+		currentIndex++;
+	}
+
+	public synchronized int getIndex() {
+		if (currentIndex >= keys.length) {
+			return -1;
+		}
+		return currentIndex;
+	}
 
 	@PostMapping("")
 	public ResponseEntity<JSONObject> getAll(@RequestBody IdCard idCard) {
@@ -37,14 +51,30 @@ public class ocr {
 			fos.write(data);
 			fos.close();
 			long start = System.currentTimeMillis();
-			JSONObject rs = HttpUtils.sendFile("https://api.fpt.ai/vision/idr/vnm", "hmHH4mRRoYJZkIimpulm8pQ8X0uV1N2s",
-					fo);
-			System.out.println("Time request: " + (System.currentTimeMillis() - start));
-			System.out.println(rs);
-			if(rs.get("message") != null && rs.get("message").toString().toLowerCase().equals("api rate limit exceeded.")) {
-				//Change key
+			while (true) {
+				int index = getIndex();
+				if (index == -1) {
+					res.put("status", 0);
+					res.put("data", "");
+					break;
+				}
+				JSONObject rs = HttpUtils.sendFile("https://api.fpt.ai/vision/idr/vnm", keys[index], fo);
+				System.out.println("Time request: " + (System.currentTimeMillis() - start));
+				System.out.println(rs);
+				if (rs.get("message") != null
+						&& rs.get("message").toString().toLowerCase().equals("api rate limit exceeded.")) {
+					// Change key
+					System.out.println("Change key");
+					addIndex();
+					continue;
+				}
+				if (rs.get("data") == null) {
+					res.put("status", 0);
+					res.put("data", "");// put data by key "data"
+				} else
+					res.put("data", rs.get("data"));// put data by key "data"
+				break;
 			}
-			res.put("data", rs.get("data"));// put data by key "data"
 			return ResponseEntity.ok(res);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
